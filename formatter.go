@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/sirupsen/logrus"
 	"github.com/mgutz/ansi"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh/terminal"
 )
 
@@ -253,14 +252,9 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 	prefix := ""
 	message := entry.Message
 
+	// smiecj: will not extract prefix by default
 	if prefixValue, ok := entry.Data["prefix"]; ok {
-		prefix = colorScheme.PrefixColor(" " + prefixValue.(string) + ":")
-	} else {
-		prefixValue, trimmedMsg := extractPrefix(entry.Message)
-		if len(prefixValue) > 0 {
-			prefix = colorScheme.PrefixColor(" " + prefixValue + ":")
-			message = trimmedMsg
-		}
+		prefix = colorScheme.PrefixColor(" [" + prefixValue.(string) + "]")
 	}
 
 	messageFormat := "%s"
@@ -300,16 +294,6 @@ func (f *TextFormatter) needsQuoting(text string) bool {
 		}
 	}
 	return false
-}
-
-func extractPrefix(msg string) (string, string) {
-	prefix := ""
-	regex := regexp.MustCompile("^\\[(.*?)\\]")
-	if regex.MatchString(msg) {
-		match := regex.FindString(msg)
-		prefix, msg = match[1:len(match)-1], strings.TrimSpace(msg[len(match):])
-	}
-	return prefix, msg
 }
 
 func (f *TextFormatter) appendKeyValue(b *bytes.Buffer, key string, value interface{}, appendSpace bool) {
