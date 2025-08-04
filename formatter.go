@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -108,6 +109,9 @@ type TextFormatter struct {
 	// The value for this parameter will be the size of padding.
 	// Its default value is zero, which means no padding will be applied for msg.
 	SpacePadding int
+
+	// Whether print caller name in prefix
+	PrintCallerName bool
 
 	// Color scheme to use.
 	colorScheme *compiledColorScheme
@@ -254,7 +258,13 @@ func (f *TextFormatter) printColored(b *bytes.Buffer, entry *logrus.Entry, keys 
 
 	// smiecj: will not extract prefix by default
 	if prefixValue, ok := entry.Data["prefix"]; ok {
-		prefix = colorScheme.PrefixColor(" [" + prefixValue.(string) + "]")
+		if f.PrintCallerName {
+			pc, _, _, _ := runtime.Caller(10)
+			fun := runtime.FuncForPC(pc)
+			prefix = colorScheme.PrefixColor(" [" + prefixValue.(string) + " " + fun.Name() + "]")
+		} else {
+			prefix = colorScheme.PrefixColor(" [" + prefixValue.(string) + "]")
+		}
 	}
 
 	messageFormat := "%s"
@@ -329,12 +339,12 @@ func (f *TextFormatter) appendValue(b *bytes.Buffer, value interface{}) {
 // This is to not silently overwrite `time`, `msg` and `level` fields when
 // dumping it. If this code wasn't there doing:
 //
-//  logrus.WithField("level", 1).Info("hello")
+//	logrus.WithField("level", 1).Info("hello")
 //
 // would just silently drop the user provided level. Instead with this code
 // it'll be logged as:
 //
-//  {"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
+//	{"level": "info", "fields.level": 1, "msg": "hello", "time": "..."}
 func prefixFieldClashes(data logrus.Fields) {
 	if t, ok := data["time"]; ok {
 		data["fields.time"] = t
